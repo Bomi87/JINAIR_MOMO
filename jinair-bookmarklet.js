@@ -3,8 +3,7 @@
 
   const APP_ID = 'jinair-fare-bookmarklet-app';
   const API_URL = '/booking/getAirAvailabilityJson';
-  const MAX_CONCURRENCY = 3;
-  const BATCH_DELAY_MS = 250;
+  const REQUEST_DELAY_MS = 900;
 
   if (document.getElementById(APP_ID)) {
     document.getElementById(APP_ID).remove();
@@ -622,15 +621,21 @@
 
     let successCount = 0;
     let failCount = 0;
-    let completedCount = 0;
 
-    async function runOne(depDate) {
-      if (stopRequested) return;
+    for (let i = 0; i < dates.length; i++) {
+      if (stopRequested) break;
 
+      const depDate = dates[i];
       const returnDate =
         values.tripType === 'RT'
           ? addDays(depDate, values.stayDays)
           : '';
+
+      setStatus(
+        `조회 중 ${i + 1}/${dates.length}\n` +
+        `${depDate}` +
+        (returnDate ? ` → ${returnDate}` : '')
+      );
 
       try {
         const payload = buildPayload(depDate, returnDate, values);
@@ -639,27 +644,14 @@
 
         resultRows.push(...rows);
         successCount++;
+        renderRows();
       } catch (error) {
         failCount++;
         console.error('[Jinair Bookmarklet]', depDate, error);
-      } finally {
-        completedCount++;
-        setStatus(
-          `조회 중 ${completedCount}/${dates.length}\n` +
-          `성공 ${successCount}일 / 실패 ${failCount}일`
-        );
-        renderRows();
       }
-    }
 
-    for (let i = 0; i < dates.length; i += MAX_CONCURRENCY) {
-      if (stopRequested) break;
-
-      const batch = dates.slice(i, i + MAX_CONCURRENCY);
-      await Promise.all(batch.map(runOne));
-
-      if (i + MAX_CONCURRENCY < dates.length && !stopRequested) {
-        await sleep(BATCH_DELAY_MS);
+      if (i < dates.length - 1 && !stopRequested) {
+        await sleep(REQUEST_DELAY_MS);
       }
     }
 
