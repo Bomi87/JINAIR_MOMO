@@ -424,7 +424,7 @@
     }
   }
 
-  $('#ja-close').onclick = () => root.remove();
+  $('.ja-close').onclick = () => root.remove();
   $('#ja-tripType').onchange = e => {
     $('#ja-returnWrap').style.display = e.target.value === 'RT' ? '' : 'none';
   };
